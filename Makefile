@@ -9,8 +9,8 @@ ROLE_DIR?=ansible
 ##############
 
 setprivileges:
-	# Give the cdi operator user 'default' cluster-admin privileges
-	oc adm policy add-cluster-role-to-user cluster-admin -z default
+	# Give the cdi operator user 'cdi-operator' cluster-admin privileges
+	oc adm policy add-cluster-role-to-user cluster-admin -z cdi-operator
 
 deploy: setprivileges
 	# Deploy the cdi-operator
