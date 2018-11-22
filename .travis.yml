@@ -12,11 +12,11 @@ env:
 
 jobs:
   include:
-    - stage: Tests
-      name: "Default (minikube with latest k8s)"
+#    - stage: Tests
+#      name: "Default (minikube with latest k8s)"
 
-    - name: "minikube (latest k8s)"
-      env: CPLATFORM=minikube
+#    - name: "minikube (latest k8s)"
+#      env: CPLATFORM=minikube
 
     - name: "oc cluster (latest okd)"
       env: CPLATFORM=oc_cluster
@@ -24,8 +24,8 @@ jobs:
     - name: "minishift (latest okd)"
       env: CPLATFORM=minishift
 
-    - name: "minikube (K8s v1.10)"
-      env: CPLATFORM=minikube CVER=1.10.7
+#    - name: "minikube (K8s v1.10)"
+#      env: CPLATFORM=minikube CVER=1.10.7
 
 cache:
   directories:
