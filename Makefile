@@ -39,7 +39,6 @@ role:
 	$(MAKE) -C $(ROLE_DIR)
 
 build: role
-	pwd
 	docker build -t $(REPO):$(TAG) -f Dockerfile .
 
 push:
