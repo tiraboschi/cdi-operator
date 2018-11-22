@@ -1,38 +1,47 @@
-language: generic
 sudo: required
-dist: trusty
+dist: xenial
 
-services:
-- docker
+branches:
+  only:
+  - master
+  - "/^v[0-9]/"
 
 env:
   global:
-  - DOCKER_TAG=$TRAVIS_TAG CHANGE_MINIKUBE_NONE_USER=true K8S_VER=1.9.0 MK_VER=0.25.2 K6T_VER=0.4.0 SRC="http://www.tinycorelinux.net/9.x/x86/release/Core-current.iso"
+    - KUBEVIRT_VER=0.9.1
 
-install:
- - git reset --hard
+jobs:
+  include:
+    - stage: Tests
+      name: "Default (minikube with latest k8s)"
+
+    - name: "minikube (latest k8s)"
+      env: CPLATFORM=minikube
+
+    - name: "oc cluster (latest okd)"
+      env: CPLATFORM=oc_cluster
+
+    - name: "minishift (latest okd)"
+      env: CPLATFORM=minishift
+
+    - name: "minikube (K8s v1.10)"
+      env: CPLATFORM=minikube CVER=1.10.7
+
+cache:
+  directories:
+  - cache
+  - "~/.minishift/cache"
+  - "~/.minikube/cache"
 
 before_script:
-- curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v$K8S_VER/bin/linux/amd64/kubectl
-  && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
-- curl -Lo minikube https://storage.googleapis.com/minikube/releases/v$MK_VER/minikube-linux-amd64
-  && chmod +x minikube && sudo mv minikube /usr/local/bin/
-- sudo minikube start --vm-driver=none --kubernetes-version=v$K8S_VER
-- minikube update-context
-- JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}';
-  until kubectl get nodes -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do
-  sleep 1; done
-- k_wait_all_running() { while [[ "$(kubectl get $1 --all-namespaces --field-selector=status.phase!=Running | wc -l)" -gt 1 ]];
-  do kubectl get $1 --all-namespaces ; sleep 6; done ; }
-- kubectl apply -f https://github.com/kubevirt/kubevirt/releases/download/v$K6T_VER/kubevirt.yaml
-- k_wait_all_running pods
+## FIXME Workaround for https://github.com/kubernetes/kubernetes/issues/61058
+### And https://github.com/LiliC/travis-minikube/blob/e0f26f7b388057f51a0e2558afd5f990e07b6c49/.travis.yml#L11
+- sudo mount --make-rshared /
+
+- bash -x ci/prepare-host $CPLATFORM
+- bash -x ci/prepare-host virtctl
+- bash -x ci/start-cluster $CPLATFORM $CVER
+- bash -x ci/deploy-kubevirt $CPLATFORM
 
 script:
-- make test
-- make build
-- make deploy
-
-after_script: 
-- k_wait_all_running pods
-- oc logs $(oc get pods --selector name=cdi-operator --output=name)
-- oc get pod -o name --namespace=kube-system | grep cdi
+- timeout 5m bash -x test.sh
